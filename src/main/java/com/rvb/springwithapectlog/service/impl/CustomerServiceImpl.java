@@ -16,7 +16,6 @@ public class CustomerServiceImpl implements CustomerService {
     @EnableSaveLog
     @Override
     public Customer saveCustomer(Customer customer) {
-
         customerRepository.save(customer);
 
         return customer;

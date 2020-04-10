@@ -2,10 +2,11 @@ package com.rvb.springwithapectlog.model;
 
 
 import javax.persistence.*;
+import java.io.Serializable;
 
 @Entity
 @Table (name = "SYS_LOG")
-public class SysLog {
+public class SysLog extends BaseModel implements Serializable {
 
     @Id
     @GeneratedValue (strategy = GenerationType.AUTO)

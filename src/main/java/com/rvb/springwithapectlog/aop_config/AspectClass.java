@@ -5,9 +5,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rvb.springwithapectlog.model.SysLog;
 import com.rvb.springwithapectlog.repository.SysLogRepository;
+import com.rvb.springwithapectlog.service.SysLogService;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -21,9 +24,10 @@ import org.json.*;
 @Component
 public class AspectClass {
 
-    @Autowired
-    SysLogRepository sysLogRepository;
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
 
+    @Autowired
+    private SysLogService logService;
 
     @Around(value = "@annotation(EnableSaveLog)")
     public Object logExecutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -41,36 +45,21 @@ public class AspectClass {
             if (joinPoint.getArgs().length > 0) {
                 requestData = joinPoint.getArgs()[0];
             }
-            saveSysLog(httpServletRequest, requestData, objectMapper, proceed);
+            log.info("AOP processing to save log in to database with {} and service name: {}", joinPoint.getSignature().getDeclaringTypeName(),
+                    joinPoint.getSignature().getName());
+            logService.saveLog(httpServletRequest, requestData, objectMapper, proceed);
             return proceed;
         } catch (Exception ex) {
-            ex.printStackTrace();
+
             if (joinPoint.getArgs().length > 0) {
                 requestData = joinPoint.getArgs()[0];
             }
-            saveSysLog(httpServletRequest, requestData, objectMapper, proceed);
+            log.error("Exception in {}.{}() with cause = {}", joinPoint.getSignature().getDeclaringTypeName(),
+                    joinPoint.getSignature().getName(), ex.getCause() != null? ex.getCause() : "NULL");
+            logService.saveLog(httpServletRequest, requestData, objectMapper, proceed);
             return proceed;
         }
 
-    }
-
-    private void saveSysLog(HttpServletRequest httpServletRequest, Object requestData, ObjectMapper objectMapper, Object proceed) throws JsonProcessingException {
-        SysLog sysLog;
-        sysLog = new SysLog();
-        sysLog.setRequestData(objectMapper.writeValueAsString(requestData));
-        JSONObject jsonObject = new JSONObject(proceed);
-        if (jsonObject.length() > 0) {
-            sysLog.setResponseData(objectMapper.writeValueAsString(proceed));
-
-        } else {
-            sysLog.setResponseData(jsonObject.toString());
-        }
-        sysLog.setRequestUrl(httpServletRequest.getRequestURI());
-        try {
-            sysLogRepository.save(sysLog);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
     }
 
 
